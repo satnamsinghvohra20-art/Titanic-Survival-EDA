@@ -1,0 +1,75 @@
+# Day 01 - Titanic Survival EDA with Pandas
+# Install: pip install pandas matplotlib seaborn
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+# ── Load Data (uses seaborn built-in dataset) ──────────────────────────────
+df = sns.load_dataset('titanic')
+print("Shape:", df.shape)
+print("\nFirst 5 rows:")
+print(df.head())
+print("\nData Types:\n", df.dtypes)
+print("\nMissing Values:\n", df.isnull().sum())
+
+# ── Handle Missing Values ──────────────────────────────────────────────────
+df['age'].fillna(df['age'].median(), inplace=True)
+df['embarked'].fillna(df['embarked'].mode()[0], inplace=True)
+df.drop(columns=['deck'], inplace=True)  # too many nulls
+
+# ── Descriptive Statistics ─────────────────────────────────────────────────
+print("\nDescriptive Stats:\n", df.describe())
+
+# ── Survival Analysis ──────────────────────────────────────────────────────
+print("\nOverall Survival Rate:", df['survived'].mean().round(3))
+print("\nSurvival by Sex:\n", df.groupby('sex')['survived'].mean().round(3))
+print("\nSurvival by Class:\n", df.groupby('pclass')['survived'].mean().round(3))
+print("\nSurvival by Embarked:\n", df.groupby('embarked')['survived'].mean().round(3))
+
+# ── Age Bins ───────────────────────────────────────────────────────────────
+df['age_group'] = pd.cut(df['age'], bins=[0,12,18,35,60,100],
+                          labels=['Child','Teen','Adult','Middle','Senior'])
+print("\nSurvival by Age Group:\n",
+      df.groupby('age_group', observed=True)['survived'].mean().round(3))
+
+# ── Visualizations ─────────────────────────────────────────────────────────
+fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+fig.suptitle('Titanic EDA', fontsize=16, fontweight='bold')
+
+# 1. Survival count
+sns.countplot(x='survived', data=df, ax=axes[0,0], palette='Set2')
+axes[0,0].set_title('Survival Count (0=No, 1=Yes)')
+
+# 2. Survival by sex
+sns.barplot(x='sex', y='survived', data=df, ax=axes[0,1], palette='Set1')
+axes[0,1].set_title('Survival Rate by Sex')
+
+# 3. Survival by class
+sns.barplot(x='pclass', y='survived', data=df, ax=axes[0,2], palette='Blues')
+axes[0,2].set_title('Survival Rate by Pclass')
+
+# 4. Age distribution
+sns.histplot(df['age'], bins=30, ax=axes[1,0], kde=True, color='teal')
+axes[1,0].set_title('Age Distribution')
+
+# 5. Fare distribution
+sns.histplot(df['fare'], bins=40, ax=axes[1,1], kde=True, color='coral')
+axes[1,1].set_title('Fare Distribution')
+
+# 6. Heatmap of correlations
+numeric_cols = df.select_dtypes(include='number')
+sns.heatmap(numeric_cols.corr(), annot=True, fmt='.2f', ax=axes[1,2],
+            cmap='coolwarm', linewidths=0.5)
+axes[1,2].set_title('Correlation Heatmap')
+
+plt.tight_layout()
+os.makedirs('outputs', exist_ok=True)
+plt.savefig('outputs/titanic_eda.png', dpi=150, bbox_inches='tight')
+plt.show()
+print("\nChart saved to outputs/titanic_eda.png")
+
+# ── Export Clean CSV ───────────────────────────────────────────────────────
+df.to_csv('outputs/titanic_clean.csv', index=False)
+print("Clean data saved to outputs/titanic_clean.csv")
